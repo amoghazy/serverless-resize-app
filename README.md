@@ -1,0 +1,1 @@
+# serverless-resize-app

@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RESIZE APP</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+</head>
+
+<body class="bg-gray-100 min-h-screen p-8">
+
+    <div
+        class="min-h-screen z-[100] flex-col flex hidden loader fixed top-0 left-0 right-0 justify-center items-center bg-black/50">
+
+
+        <div
+            class="w-28 h-28 border-8 text-blue-400 text-4xl animate-spin border-gray-300 flex items-center justify-center border-t-blue-400 rounded-full">
+
+        </div>
+        <span class="text-4xl font-semibold text-blue-400 my-3"> wait for uploading</span>
+    </div>
+    <div class="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-6">
+        <h1 class="text-3xl font-bold mb-6 text-center">Image Upload and Gallery
+            <p onclick="logout()" class="text-red-500 hover:underline w-fit ml-auto inline-block cursor-pointer"
+                id="logout">
+                logout
+            </p>
+        </h1>
+        <h3 id="email" class="text-2xl font-bold mb-6 ml-auto text-center text-cyan-500"></h3>
+
+        <div class="mb-8">
+            <h2 class="text-2xl font-semibold mb-4">Upload New Image</h2>
+            <form class="flex items-center space-x-4">
+                <input type="file" accept="image/*" id="file" class="block w-full text-sm text-gray-500
+                    file:mr-4 file:py-2 file:px-4
+                    file:rounded-full file:border-0
+                    file:text-sm file:font-semibold
+                    file:bg-blue-50 file:text-blue-700
+                    hover:file:bg-blue-100
+                ">
+                <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">
+                    Upload
+                </button>
+            </form>
+        </div>
+
+        <div>
+            <h2 class="text-2xl font-semibold mb-4">Image Gallery</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 images-container">
+
+
+            </div>
+        </div>
+    </div>
+</body>
+<script>
+    const email = document.getElementById('email');
+    const userEmail = localStorage.getItem('email');
+    email.textContent = userEmail;
+    const apiURL = "https://6gwq6gacxc.execute-api.us-east-1.amazonaws.com"
+    const loader = document.querySelector('.loader');
+    const form = document.querySelector('form');
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const file = document.getElementById('file').files[0];
+        if (!file) {
+            console.error('No file selected');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+            const base64Image = reader.result.split(',')[1];
+            try {
+                console.log('Uploading image...');
+                loader.classList.remove('hidden');
+                const response = await fetch(`${apiURL}/upload`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        email: userEmail,
+                        filename: file.name,
+                        image: base64Image
+                    }),
+                    headers: {
+                        'Content-Type': "application/json",
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const responseData = await response.json();
+                console.log('Upload successful:', responseData);
+                setTimeout(() => {
+                    loader.classList.remove('hidden')
+                    window.location.reload();
+
+                }, 3000);
+            } catch (error) {
+                console.error('Error uploading image:', error);
+            }
+        };
+        reader.readAsDataURL(file);
+    });
+
+    async function getImages() {
+        const imagesContainer = document.querySelector('.images-container');
+        try {
+            const response = await fetch(`${apiURL}/images/${userEmail}`);
+            const data = await response.json();
+            console.log(data);
+            for (const key in data) {
+
+                const image = data[key];
+
+                const imageElement = document.createElement('div');
+                imageElement.innerHTML = `
+                    <div class="relative group">
+                        <img src="${image}" alt="${key}" class="w-full h-48 object-containe rounded-lg">
+                        <div class="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center rounded-lg">
+                            <a href="${image}" class="bg-cyan-500 animate-bounce hover:bg-cyan-600 text-white font-bold py-2 px-4 rounded">
+                                Download
+                            </a>
+                        </div>
+                    </div>
+                `;
+                imagesContainer.appendChild(imageElement);
+            }
+
+
+        }
+        catch (error) { }
+    }
+    window.addEventListener("DOMContentLoaded", getImages)
+    const logout = () => {
+        localStorage.removeItem('email');
+        window.location.href = "/login.html";
+    }
+
+</script>
+
+</html>
